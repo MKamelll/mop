@@ -1,4 +1,4 @@
-FLAGS=-Wall -Wextra -pedantic
+FLAGS=-Wall -Wextra -pedantic -g
 SRC=./src
 
 mop: $(SRC)/mop.cpp

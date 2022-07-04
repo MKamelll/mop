@@ -68,6 +68,10 @@ namespace Lexer
             throw LexerError("Unknown token type");
         }
 
+        variant<string, int, float> getLexeme() {
+            return mLexeme;
+        }
+
         friend ostream & operator<<(ostream & str, Lexeme lexeme) {
             if (lexeme.getType() == "string") {
                 str << "'" << get<string>(lexeme.mLexeme) << "'";
@@ -91,6 +95,10 @@ namespace Lexer
 
         TokenType getType() {
             return mType;
+        }
+
+        Lexeme getLexeme() {
+            return mLexeme;
         }
 
         friend ostream & operator<<(ostream & str, Token token) {
@@ -119,7 +127,7 @@ namespace Lexer
             return mSrc[mCurrIndex - 1];
         }
         
-    public:    
+    public:
         Tokenizer(string source) : mSrc(source), mCurrIndex(0) {}
 
         Token next() {

@@ -1,19 +1,17 @@
-#include "lexer.cpp"
+#include "parser.cpp"
 
 using namespace std;
 
 int main()
 {
-    string src = "( + - * / ) 12.52 v c x %";
+    string src = "12 13 20 15.32 v c x";
     auto lexer = Lexer::Tokenizer(src);
-
-    auto token = lexer.next();
-    while (token.getType() != Lexer::TokenType::ENDOFFILE) {
-        cout << token << endl;
-        token = lexer.next();
-    }
+    auto parser = Parser::Ast(lexer);
+    auto ast = parser.parse();
     
-    cout << token << endl;
+    for (auto& node : ast) {
+        cout << node << endl;
+    }
     
     return 0;
 }
