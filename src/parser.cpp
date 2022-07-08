@@ -1,3 +1,4 @@
+#pragma once
 #include "lexer.cpp"
 #include<vector>
 #include<memory>

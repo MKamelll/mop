@@ -1,3 +1,4 @@
+#include "lexer.cpp"
 #include "parser.cpp"
 
 using namespace std;
