@@ -4,14 +4,16 @@ using namespace std;
 
 int main()
 {
-    string src = "12 13 20 15.32 v c x";
+    string src = "(-2 + 3) * 2";
     auto lexer = Lexer::Tokenizer(src);
     auto parser = Parser::Ast(lexer);
     auto ast = parser.parse();
     
+    auto token = lexer.next();
+    
     for (auto& node : ast) {
         cout << node << endl;
     }
-    
+
     return 0;
 }

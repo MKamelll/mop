@@ -2,6 +2,7 @@
 #include<iostream>
 #include<variant>
 #include<exception>
+#include<stdexcept>
 #include<cctype>
 #include<sstream>
 
@@ -9,22 +10,16 @@ namespace Lexer
 {
     using namespace std;
 
-    class LexerError : public exception
+    class LexerError : public runtime_error
     {   
     
     public:
-        const char * mMesg;
-        LexerError(const char * mesg) : mMesg(mesg) {}
-        
-        virtual const char* what() const throw()
-        {
-            return mMesg;
-        }
+        using runtime_error::runtime_error;
     };
 
     enum class TokenType
     {
-        LEFT_PAREN, RIGHT_PAREN, PLUS, MINUS, STAR, SLASH, MOD, INT, FLOAT, IDENTIFIER, ENDOFFILE
+        LEFT_PAREN, RIGHT_PAREN, PLUS, MINUS, STAR, SLASH, MOD, CARROT, INT, FLOAT, IDENTIFIER, ENDOFFILE
     };
 
     ostream & operator<<(ostream & str, TokenType type) {
@@ -39,6 +34,7 @@ namespace Lexer
             case TokenType::FLOAT: str << "FLOAT"; break;
             case TokenType::IDENTIFIER: str << "IDENTIFIER"; break;
             case TokenType::MOD: str << "MOD"; break;
+            case TokenType::CARROT: str << "CARROT"; break;
             case TokenType::ENDOFFILE: str << "ENDOFFILE"; break;
             default:
                 throw LexerError("Undefined TokenType");
@@ -72,6 +68,16 @@ namespace Lexer
             return mLexeme;
         }
 
+        string getLexemeStr() {
+            if (getType() == "int") {
+                return to_string(get<int>(mLexeme));
+            } else if (getType() == "float") {
+                return to_string(get<float>(mLexeme));
+            }
+
+            return get<string>(mLexeme);
+        }
+
         friend ostream & operator<<(ostream & str, Lexeme lexeme) {
             if (lexeme.getType() == "string") {
                 str << "'" << get<string>(lexeme.mLexeme) << "'";
@@ -101,6 +107,10 @@ namespace Lexer
             return mLexeme;
         }
 
+        string getLexemeStr() {
+            return mLexeme.getLexemeStr();
+        }
+
         friend ostream & operator<<(ostream & str, Token token) {
             str << "(type: " << token.mType << ", lexeme: " << token.mLexeme << ")";
             return str;
@@ -111,10 +121,11 @@ namespace Lexer
     {
         string mSrc;
         size_t mCurrIndex;
+        char mCurrChar;
     
     private:    
-        char advance() {
-            return mSrc[mCurrIndex++];
+        void advance(int step = 1) {
+            mCurrIndex+=step;
         }
 
         bool isAtEnd() {
@@ -126,25 +137,53 @@ namespace Lexer
         char previous() {
             return mSrc[mCurrIndex - 1];
         }
+
+        char curr() {
+            return mSrc[mCurrIndex];
+        }
         
     public:
         Tokenizer(string source) : mSrc(source), mCurrIndex(0) {}
 
         Token next() {
             if (isAtEnd()) return Token(TokenType::ENDOFFILE, Lexeme("EOF"));
-            char curr = advance();
-            switch (curr)
+            switch (curr())
             {
-                case '+': return Token(TokenType::PLUS, Lexeme("+"));
-                case '-': return Token(TokenType::MINUS, Lexeme("-"));
-                case '*': return Token(TokenType::STAR, Lexeme("*"));
-                case '/': return Token(TokenType::SLASH, Lexeme("/"));
-                case '(': return Token(TokenType::LEFT_PAREN, Lexeme("("));
-                case ')': return Token(TokenType::RIGHT_PAREN, Lexeme(")"));
-                case '%': return Token(TokenType::MOD, Lexeme("%"));
+                case '+': {
+                    advance();
+                    return Token(TokenType::PLUS, Lexeme("+"));
+                }
+                case '-': {
+                    advance();
+                    return Token(TokenType::MINUS, Lexeme("-"));
+                } 
+                case '*': {
+                    advance();
+                    return Token(TokenType::STAR, Lexeme("*"));
+                } 
+                case '/': {
+                    advance();
+                    return Token(TokenType::SLASH, Lexeme("/"));
+                }
+                case '(': {
+                    advance();
+                    return Token(TokenType::LEFT_PAREN, Lexeme("("));
+                }
+                case ')': {
+                    advance();
+                    return Token(TokenType::RIGHT_PAREN, Lexeme(")"));
+                }
+                case '%': {
+                    advance();
+                    return Token(TokenType::MOD, Lexeme("%"));
+                } 
+                case '^': {
+                    advance();
+                    return Token(TokenType::CARROT, Lexeme("^"));
+                }
                 
                 default: {
-                    if (isdigit(curr)) {
+                    if (isdigit(curr())) {
                         variant<int, float> number = aNumber();
 
                         if (holds_alternative<int>(number)) {
@@ -152,11 +191,12 @@ namespace Lexer
                         } else if (holds_alternative<float>(number)) {
                             return Token(TokenType::FLOAT, Lexeme(get<float>(number)));
                         }
-                    } else if (isalpha(curr)) {
+                    } else if (isalpha(curr())) {
                         string identifier = anIdentifier();
                         return Token(TokenType::IDENTIFIER, Lexeme(identifier));
                     }
                     
+                    advance();
                     return next();
                 }
             }
@@ -166,18 +206,17 @@ namespace Lexer
             stringstream result("");
             bool isFloat = false;
             
-            result << previous();
-            
             while (!isAtEnd()) {
-                char curr = advance();
-                if (curr == '.') {
+                if (curr() == '.') {
                     isFloat = true;
-                    result << curr;
+                    result << curr();
+                    advance();
                     continue;
                 }
-                if (!isdigit(curr)) break;
+                if (!isdigit(curr())) break;
 
-                result << curr;
+                result << curr();
+                advance();
             }
 
             if (!isFloat) {
@@ -190,12 +229,10 @@ namespace Lexer
         string anIdentifier() {
             stringstream result("");
 
-            result << previous();
-
             while (!isAtEnd()) {
-                char curr = advance();
-                if (!isalnum(curr)) break;
-                result << curr;
+                if (!isalnum(curr())) break;
+                result << curr();
+                advance();
             }
 
             return result.str();
