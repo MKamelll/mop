@@ -87,18 +87,6 @@ namespace Parser
         PrefixNode(string op, unique_ptr<AstNode> rhs) : mOp(op), mRhs(move(rhs)) {}
     };
 
-    class ParenNode : public AstNode
-    {
-        unique_ptr<AstNode> mExpr;
-
-        void print(ostream & str) override {
-            str << "Paren(" << mExpr << ")";
-        }
-
-    public:
-        ParenNode(unique_ptr<AstNode> expr) : mExpr(move(expr)) {}
-    };
-
     enum class Assoc
     {
         RIGHT, LEFT, NONE
