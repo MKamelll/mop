@@ -22,31 +22,31 @@ void run(string & src) {
 void repl() {
     cout << "Welcome to mop.." << endl;
     while (true) {
-        cout << ">> ";
-        string line;
-        getline(cin, line);
+        try {
+            cout << ">> ";
+            string line;
+            getline(cin, line);
 
-        Util::trim(line);
+            Util::trim(line);
 
-        if (line.length() < 1) continue;
+            if (line.length() < 1) continue;
 
-        auto linesv = string_view(line);
-        if (linesv.find_first_of(":q") == 0 || linesv.find_first_of(":Q") == 0 || linesv.find_first_of(":quit") == 0) {
-            cout << "Goodbye!" << endl;
-            exit(0);
+            auto linesv = string_view(line);
+            if (linesv.find_first_of(":q") == 0 || linesv.find_first_of(":Q") == 0 || linesv.find_first_of(":quit") == 0) {
+                cout << "Goodbye!" << endl;
+                exit(0);
+            }
+
+            run(line);
+        } catch (exception & e) {
+            cout << e.what() << endl;
+            continue;
         }
-
-        run(line);
     }
 }
 
 int main()
 {
-    try {
-        repl();
-    } catch (exception & e) {
-        cout << e.what() << endl;
-    }
-
+    repl();
     return 0;
 }
