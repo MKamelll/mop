@@ -8,8 +8,8 @@
 using namespace std;
 
 void run(string & src) {
-    auto lexer = Lexer::Tokenizer(src);
-    auto parser = Parser::Ast(lexer);
+    auto lexer = lexer::Tokenizer(src);
+    auto parser = parser::Ast(lexer);
     auto ast = parser.parse();
     
     auto token = lexer.next();

@@ -1,13 +1,7 @@
 #pragma once
-#include<string>
-#include<iostream>
-#include<variant>
-#include<exception>
-#include<stdexcept>
-#include<cctype>
-#include<sstream>
+#include "common.cpp"
 
-namespace Lexer
+namespace lexer
 {
     using namespace std;
 

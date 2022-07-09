@@ -1,10 +1,8 @@
 #pragma once
 #include "lexer.cpp"
-#include<vector>
-#include<memory>
-#include<type_traits>
+#include "astnode.cpp"
 
-namespace Parser
+namespace parser
 {
     using namespace std;
     
@@ -12,79 +10,6 @@ namespace Parser
     {
     public:
         using runtime_error::runtime_error;
-    };
-
-    class AstNode {
-    public:
-        virtual void print(ostream & str) = 0;
-        friend ostream & operator<<(ostream & str, unique_ptr<AstNode> & node) {
-            node->print(str);
-            return str;
-        }
-    };
-
-    class PrimaryNode : public AstNode
-    {
-        variant<string, int, float> mValue;
-    
-    protected:
-        void print(ostream & str) override {
-            if (getType() == "string") {
-                str << "Identifier(" << get<string>(mValue) << ")";
-            } else if (getType() == "int") {
-                str << "Int(" << get<int>(mValue) << ")";
-            } else if (getType() == "float") {
-                str << "Float(" << get<float>(mValue) << ")";
-            }
-        }
-    
-    public:
-        PrimaryNode(variant<string, int, float> value) : mValue(value) {}
-        PrimaryNode(Lexer::Lexeme value) : mValue(value.getLexeme()) {}
-
-        string getType() {
-            if (holds_alternative<int>(mValue)) {
-                return "int";
-            } else if (holds_alternative<float>(mValue)) {
-                return "float";
-            }
-            return "string";
-        }
-    };
-
-    class NumberNode : public PrimaryNode {
-        using PrimaryNode::PrimaryNode;
-    };
-    class IdentifierNode : public PrimaryNode {
-        using PrimaryNode::PrimaryNode;
-    };
-
-    class BinaryNode : public AstNode
-    {
-        string mOp;
-        unique_ptr<AstNode> mLhs;
-        unique_ptr<AstNode> mRhs;
-
-        void print(ostream & str) override {
-            str << "Binary(op: '" << mOp << "', lhs: " << mLhs << ", rhs: " << mRhs << ")";
-        }
-    
-    public:
-        BinaryNode(string op, unique_ptr<AstNode> lhs, unique_ptr<AstNode> rhs) 
-            : mOp(op), mLhs(move(lhs)), mRhs(move(rhs)) {}
-    };
-
-    class PrefixNode : public AstNode
-    {
-        string mOp;
-        unique_ptr<AstNode> mRhs;
-
-        void print(ostream & str) override {
-            str << "Prefix(op: '" << mOp << "', rhs: " << mRhs << ")";
-        }
-    
-    public:
-        PrefixNode(string op, unique_ptr<AstNode> rhs) : mOp(op), mRhs(move(rhs)) {}
     };
 
     enum class Assoc
@@ -104,14 +29,14 @@ namespace Parser
     
     class Ast
     {
-        Lexer::Tokenizer mLexer;
-        unique_ptr<AstNode> mRoot;
-        Lexer::Token mCurrToken;
-        Lexer::Token mPrevToken;
-        vector<unique_ptr<AstNode>> mSubTrees;
+        lexer::Tokenizer mLexer;
+        unique_ptr<astnode::AstNode> mRoot;
+        lexer::Token mCurrToken;
+        lexer::Token mPrevToken;
+        vector<unique_ptr<astnode::AstNode>> mSubTrees;
         
         bool isAtEnd() {
-            if (mCurrToken.getType() == Lexer::TokenType::ENDOFFILE) {
+            if (mCurrToken.getType() == lexer::TokenType::ENDOFFILE) {
                 return true;
             }
 
@@ -123,15 +48,15 @@ namespace Parser
             mCurrToken = mLexer.next();
         }
 
-        Lexer::Token curr() {
+        lexer::Token curr() {
             return mCurrToken;
         }
 
-        Lexer::Token previous() {
+        lexer::Token previous() {
             return mPrevToken;
         }
 
-        bool check(Lexer::TokenType type) {
+        bool check(lexer::TokenType type) {
             if (type == mCurrToken.getType()) {
                 return true;
             }
@@ -141,7 +66,7 @@ namespace Parser
 
         template<typename... T>
         bool match(T... types) {
-            for (auto& type : {static_cast<Lexer::TokenType>(types)...}) {
+            for (auto& type : {static_cast<lexer::TokenType>(types)...}) {
                 if (check(type)) {
                     advance();
                     return true;
@@ -170,20 +95,20 @@ namespace Parser
         }
 
     public:
-        Ast(Lexer::Tokenizer lexer) : mLexer(lexer), mCurrToken(mLexer.next()), mPrevToken(mCurrToken) {}
+        Ast(lexer::Tokenizer lexer) : mLexer(lexer), mCurrToken(mLexer.next()), mPrevToken(mCurrToken) {}
         
-        vector<unique_ptr<AstNode>> parse() {
+        vector<unique_ptr<astnode::AstNode>> parse() {
             if (isAtEnd()) return move(mSubTrees);
 
-            unique_ptr<AstNode> expr = parseExpr();
+            unique_ptr<astnode::AstNode> expr = parseExpr();
 
             mSubTrees.push_back(move(expr));
 
             return parse();
         }
 
-        unique_ptr<AstNode> parseExpr(int minPrec = 0) {
-            unique_ptr<AstNode> lhs = parsePrimary();
+        unique_ptr<astnode::AstNode> parseExpr(int minPrec = 0) {
+            unique_ptr<astnode::AstNode> lhs = parsePrimary();
 
             while (!isAtEnd()) {
                 string op = curr().getLexemeStr();
@@ -195,52 +120,52 @@ namespace Parser
 
                 advance();
 
-                unique_ptr<AstNode> rhs = parseExpr(nextMinPrec);
+                unique_ptr<astnode::AstNode> rhs = parseExpr(nextMinPrec);
 
-                lhs = make_unique<BinaryNode>(BinaryNode(op, move(lhs), move(rhs)));
+                lhs = make_unique<astnode::BinaryNode>(astnode::BinaryNode(op, move(lhs), move(rhs)));
             }
                         
             mRoot = move(lhs);
             return move(mRoot);           
         }
 
-        unique_ptr<AstNode> parsePrimary() {
+        unique_ptr<astnode::AstNode> parsePrimary() {
             return parseNumber();
         }
 
-        unique_ptr<AstNode> parseNumber() {
-            if (match(Lexer::TokenType::INT, Lexer::TokenType::FLOAT)) {
-                auto node = make_unique<NumberNode>(NumberNode(previous().getLexeme()));
+        unique_ptr<astnode::AstNode> parseNumber() {
+            if (match(lexer::TokenType::INT, lexer::TokenType::FLOAT)) {
+                auto node = make_unique<astnode::NumberNode>(astnode::NumberNode(previous().getLexeme()));
                 return node;
             }
 
             return parseIdentifier();
         }
 
-        unique_ptr<AstNode> parseIdentifier() {
-            if (match(Lexer::TokenType::IDENTIFIER)) {
-                auto node = make_unique<IdentifierNode>(IdentifierNode(previous().getLexeme()));
+        unique_ptr<astnode::AstNode> parseIdentifier() {
+            if (match(lexer::TokenType::IDENTIFIER)) {
+                auto node = make_unique<astnode::IdentifierNode>(astnode::IdentifierNode(previous().getLexeme()));
                 return node;
             }
 
             return parsePrefix();
         }
 
-        unique_ptr<AstNode> parsePrefix() {
-            if (match(Lexer::TokenType::PLUS, Lexer::TokenType::MINUS)) {
+        unique_ptr<astnode::AstNode> parsePrefix() {
+            if (match(lexer::TokenType::PLUS, lexer::TokenType::MINUS)) {
                 string op = previous().getLexemeStr();
-                unique_ptr<AstNode> rhs = parsePrimary(); 
-                return make_unique<PrefixNode>(PrefixNode(op, move(rhs)));
+                unique_ptr<astnode::AstNode> rhs = parsePrimary(); 
+                return make_unique<astnode::PrefixNode>(astnode::PrefixNode(op, move(rhs)));
             }
             
             return parseParens();
         }
 
-        unique_ptr<AstNode> parseParens() {
-            if (match(Lexer::TokenType::LEFT_PAREN)) {
-                if (match(Lexer::TokenType::RIGHT_PAREN)) return parseExpr();
-                unique_ptr<AstNode> expr = parseExpr();
-                if (match(Lexer::TokenType::RIGHT_PAREN)) return expr;
+        unique_ptr<astnode::AstNode> parseParens() {
+            if (match(lexer::TokenType::LEFT_PAREN)) {
+                if (match(lexer::TokenType::RIGHT_PAREN)) return parseExpr();
+                unique_ptr<astnode::AstNode> expr = parseExpr();
+                if (match(lexer::TokenType::RIGHT_PAREN)) return expr;
 
                 throw ParserError("Expected a closing ')' instead got" + curr().getLexemeStr() + "'");
             }
