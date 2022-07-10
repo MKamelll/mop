@@ -2,8 +2,8 @@
 #include "parser.h"
 #include "astnode.h"
 
-using namespace parser;
-
+namespace parser {
+    
 /////////////////////////////////////////////////////////////////////
 
 OpInfo::OpInfo(int prec, Assoc assoc) : mPrec(prec), mAssoc(assoc) {}
@@ -147,4 +147,6 @@ std::unique_ptr<astnode::AstNode> Ast::parseParens() {
     }
 
     throw ParserError("Expected a primary instead got '" + curr().getLexemeStr() + "'");
+}
+
 }

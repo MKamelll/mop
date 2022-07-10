@@ -27,17 +27,10 @@ public:
     std::string getType();
     std::variant<std::string, int, float> getLexeme();
     std::string getLexemeStr();
-    friend std::ostream & operator<<(std::ostream & str, Lexeme lexeme) {
-        if (lexeme.getType() == "string") {
-            str << "'" << std::get<std::string>(lexeme.mLexeme) << "'";
-        } else if (lexeme.getType() == "int") {
-            str << std::get<int>(lexeme.mLexeme);
-        } else if (lexeme.getType() == "float") {
-            str << std::get<float>(lexeme.mLexeme);
-        }
-        return str;
-    }
+    friend std::ostream & operator<<(std::ostream & str, Lexeme lexeme);
 };
+
+std::ostream & operator<<(std::ostream & str, Lexeme lexeme);
 
 class Token
 {
@@ -50,29 +43,10 @@ public:
     TokenType getType();
     Lexeme getLexeme();
     std::string getLexemeStr();
-    friend std::ostream & operator<<(std::ostream & str, Token token) {
-        str << "(type: ";
-        switch (token.mType) {
-        case TokenType::LEFT_PAREN: str << "LEFT_PAREN"; break;
-        case TokenType::RIGHT_PAREN: str << "RIGHT_PAREN"; break;
-        case TokenType::PLUS: str << "PLUS"; break;
-        case TokenType::MINUS: str << "MINUS"; break;
-        case TokenType::STAR: str << "STAR"; break;
-        case TokenType::SLASH: str << "SLASH"; break;
-        case TokenType::INT: str << "INT"; break;
-        case TokenType::FLOAT: str << "FLOAT"; break;
-        case TokenType::IDENTIFIER: str << "IDENTIFIER"; break;
-        case TokenType::MOD: str << "MOD"; break;
-        case TokenType::CARROT: str << "CARROT"; break;
-        case TokenType::ENDOFFILE: str << "ENDOFFILE"; break;
-        default:
-            throw LexerError("Undefined TokenType");
-        }
-        
-        str << ", lexeme: " << token.mLexeme << ")";
-        return str;
-    }
+    friend std::ostream & operator<<(std::ostream & str, Token token);
 };
+
+std::ostream & operator<<(std::ostream & str, Token token);
 
 class Tokenizer
 {
