@@ -1,13 +1,15 @@
 #pragma once
 #include "lexer.h"
 #include "visitor.h"
+#include<string>
+#include<memory>
 
 namespace astnode {
 
 class AstNode
 {
 public:
-    virtual std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) = 0;
+    virtual std::string accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) = 0;
     friend std::ostream & operator<<(std::ostream & str, AstNode & node);
 };
 
@@ -22,7 +24,7 @@ public:
 
     std::string getType();
     std::variant<std::string, int, float> getValue();
-    std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) override;
+    std::string accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) override;
 };
 
 class NumberNode : public PrimaryNode {
@@ -44,7 +46,7 @@ public:
     AstNode & getLhs();
     AstNode & getRhs();
 
-    std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) override;
+    std::string accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) override;
 };
 
 class PrefixNode : public AstNode
@@ -57,7 +59,7 @@ public:
     std::string getOp();
     AstNode & getRhs();
 
-    std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) override;
+    std::string accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) override;
 };
 
 }

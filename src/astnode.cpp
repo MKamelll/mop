@@ -25,7 +25,7 @@ std::variant<std::string, int, float> PrimaryNode::getValue() {
     return mValue;
 }
 
-std::string PrimaryNode::accept(std::unique_ptr<visitor::ToStringVisitor> visitor) {
+std::string PrimaryNode::accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) {
     return visitor->visit(this);
 }
 
@@ -46,7 +46,7 @@ AstNode & BinaryNode::getRhs() {
     return *mRhs;
 }
 
-std::string BinaryNode::accept(std::unique_ptr<visitor::ToStringVisitor> visitor) {
+std::string BinaryNode::accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) {
     return visitor->visit(this);
 }
 
@@ -62,7 +62,7 @@ AstNode & PrefixNode::getRhs() {
     return *mRhs;
 }
 
-std::string PrefixNode::accept(std::unique_ptr<visitor::ToStringVisitor> visitor) {
+std::string PrefixNode::accept(std::unique_ptr<visitor::Visitor<std::string>> visitor) {
     return visitor->visit(this);
 }
 
