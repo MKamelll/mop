@@ -29,8 +29,7 @@ void repl() {
 
             if (line.length() < 1) continue;
 
-            auto linesv = string_view(line);
-            if (linesv.find_first_of(":q") == 0 || linesv.find_first_of(":Q") == 0 || linesv.find_first_of(":quit") == 0) {
+            if (line.rfind(":q", 0) == 0 || line.rfind(":Q", 0) == 0 || line.rfind(":quit", 0) == 0) {
                 cout << "Goodbye!" << endl;
                 exit(0);
             }
