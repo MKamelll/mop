@@ -1,6 +1,6 @@
 #include "lexer.h"
 #include "parser.h"
-#include "util.cpp"
+#include "util.h"
 #include <algorithm>
 #include <string>
 #include <string_view>
@@ -25,7 +25,7 @@ void repl() {
             string line;
             getline(cin, line);
 
-            Util::trim(line);
+            util::trim(line);
 
             if (line.length() < 1) continue;
 

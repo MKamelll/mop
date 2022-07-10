@@ -1,12 +1,8 @@
-#pragma once
 #include <string>
 
-namespace Util
+namespace util
 {
-
-    using namespace std;
-
-    void trimLeft(string & s) {
+    void trimLeft(std::string & s) {
         auto start = s.begin();
         auto end = s.end();
 
@@ -17,10 +13,10 @@ namespace Util
             }
         }
 
-        s = string(start, end);
+        s = std::string(start, end);
     }
 
-    void trimRight(string & s) {
+    void trimRight(std::string & s) {
         auto start = s.rbegin();
         auto end = s.rend();
 
@@ -31,10 +27,10 @@ namespace Util
             }
         }
 
-        s = string(end.base(), start.base());
+        s = std::string(end.base(), start.base());
     }
 
-    void trim(string & s) {
+    void trim(std::string & s) {
         trimLeft(s);
         trimRight(s);
     }
