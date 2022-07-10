@@ -1,5 +1,5 @@
 #pragma once
-#include "lexer.cpp"
+#include "lexer.h"
 #include "astnode.cpp"
 
 namespace parser

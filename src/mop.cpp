@@ -1,4 +1,4 @@
-#include "lexer.cpp"
+#include "lexer.h"
 #include "parser.cpp"
 #include "util.cpp"
 #include <algorithm>
@@ -11,11 +11,9 @@ void run(string & src) {
     auto lexer = lexer::Tokenizer(src);
     auto parser = parser::Ast(lexer);
     auto ast = parser.parse();
-    
-    auto token = lexer.next();
-    
+        
     for (auto& node : ast) {
-        cout << node << endl;
+        cout << *node << endl;
     }
 }
 
