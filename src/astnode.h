@@ -1,28 +1,17 @@
 #pragma once
 #include "lexer.h"
+#include "visitor.h"
 
 namespace astnode {
 
-class PrimaryNode;
-class BinaryNode;
-class PrefixNode;
-
-class ToStringVisitor
+class AstNode
 {
 public:
-    std::string visit(PrimaryNode * node);
-    std::string visit(BinaryNode * node);
-    std::string visit(PrefixNode * node);
+    virtual std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) = 0;
+    friend std::ostream & operator<<(std::ostream & str, AstNode & node);
 };
 
-class AstNode {
-public:
-    virtual std::string accept(std::unique_ptr<ToStringVisitor> visitor) = 0;
-    friend std::ostream & operator<<(std::ostream & str, AstNode & node) {
-        str << node.accept(std::make_unique<ToStringVisitor>(ToStringVisitor()));
-        return str;
-    }
-};
+std::ostream & operator<<(std::ostream & str, AstNode & node);
 
 class PrimaryNode : public AstNode
 {
@@ -33,7 +22,7 @@ public:
 
     std::string getType();
     std::variant<std::string, int, float> getValue();
-    std::string accept(std::unique_ptr<ToStringVisitor> visitor) override;
+    std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) override;
 };
 
 class NumberNode : public PrimaryNode {
@@ -55,7 +44,7 @@ public:
     AstNode & getLhs();
     AstNode & getRhs();
 
-    std::string accept(std::unique_ptr<ToStringVisitor> visitor) override;
+    std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) override;
 };
 
 class PrefixNode : public AstNode
@@ -68,7 +57,7 @@ public:
     std::string getOp();
     AstNode & getRhs();
 
-    std::string accept(std::unique_ptr<ToStringVisitor> visitor) override;
+    std::string accept(std::unique_ptr<visitor::ToStringVisitor> visitor) override;
 };
 
 }

@@ -1,6 +1,11 @@
 #include "astnode.h"
 
-using namespace astnode;
+namespace astnode {
+    
+std::ostream & operator<<(std::ostream & str, AstNode & node) {
+    str << node.accept(std::make_unique<visitor::ToStringVisitor>(visitor::ToStringVisitor()));
+    return str;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -20,7 +25,7 @@ std::variant<std::string, int, float> PrimaryNode::getValue() {
     return mValue;
 }
 
-std::string PrimaryNode::accept(std::unique_ptr<ToStringVisitor> visitor) {
+std::string PrimaryNode::accept(std::unique_ptr<visitor::ToStringVisitor> visitor) {
     return visitor->visit(this);
 }
 
@@ -41,7 +46,7 @@ AstNode & BinaryNode::getRhs() {
     return *mRhs;
 }
 
-std::string BinaryNode::accept(std::unique_ptr<ToStringVisitor> visitor) {
+std::string BinaryNode::accept(std::unique_ptr<visitor::ToStringVisitor> visitor) {
     return visitor->visit(this);
 }
 
@@ -57,33 +62,8 @@ AstNode & PrefixNode::getRhs() {
     return *mRhs;
 }
 
-std::string PrefixNode::accept(std::unique_ptr<ToStringVisitor> visitor) {
+std::string PrefixNode::accept(std::unique_ptr<visitor::ToStringVisitor> visitor) {
     return visitor->visit(this);
 }
 
-////////////////////////////////////////////////////////////////////////////////////
-
-std::string ToStringVisitor::visit(PrimaryNode * node) {
-    std::stringstream str;
-    if (node->getType() == "string") {
-        str << "Identifier(" << std::get<std::string>(node->getValue()) << ")";
-    } else if (node->getType() == "int") {
-        str << "Int(" << std::get<int>(node->getValue()) << ")";
-    } else if (node->getType() == "float") {
-        str << "Float(" << std::get<float>(node->getValue()) << ")";
-    }
-
-    return str.str();
-}
-
-std::string ToStringVisitor::visit(BinaryNode * node) {
-    std::stringstream str;
-    str << "Binary(op: '" << node->getOp() << "', lhs: " << node->getLhs() << ", rhs: " << node->getRhs() << ")";
-    return str.str();
-}
-
-std::string ToStringVisitor::visit(PrefixNode * node) {
-    std::stringstream str;
-    str << "Prfix(op: " << node->getOp() << ", rhs: " << node->getRhs() << ")";
-    return str.str();
 }
