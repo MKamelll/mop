@@ -1,134 +1,89 @@
-#pragma once
-#include "lexer.h"
+#include "astnode.h"
 
-namespace astnode
-{
-    using namespace std;
+using namespace astnode;
 
-    class PrimaryNode;
-    class BinaryNode;
-    class PrefixNode;
+/////////////////////////////////////////////////////////////////////////////////////
 
-    class ToStringVisitor
-    {
-    public:
-        string visit(PrimaryNode * node);
-        string visit(BinaryNode * node);
-        string visit(PrefixNode * node);
-    };
+PrimaryNode::PrimaryNode(std::variant<std::string, int, float> value) : mValue(value) {}
+PrimaryNode::PrimaryNode(lexer::Lexeme value) : mValue(value.getLexeme()) {}
 
-    class AstNode {
-    public:
-        virtual string accept(unique_ptr<ToStringVisitor> visitor) = 0;
-        friend ostream & operator<<(ostream & str, AstNode & node) {
-            str << node.accept(make_unique<ToStringVisitor>(ToStringVisitor()));
-            return str;
-        }
-    };
+std::string PrimaryNode::getType() {
+    if (std::holds_alternative<int>(mValue)) {
+        return "int";
+    } else if (std::holds_alternative<float>(mValue)) {
+        return "float";
+    }
+    return "string";
+}
 
-    class PrimaryNode : public AstNode
-    {
-        variant<string, int, float> mValue;
-    public:
-        PrimaryNode(variant<string, int, float> value) : mValue(value) {}
-        PrimaryNode(lexer::Lexeme value) : mValue(value.getLexeme()) {}
+std::variant<std::string, int, float> PrimaryNode::getValue() {
+    return mValue;
+}
 
-        string getType() {
-            if (holds_alternative<int>(mValue)) {
-                return "int";
-            } else if (holds_alternative<float>(mValue)) {
-                return "float";
-            }
-            return "string";
-        }
+std::string PrimaryNode::accept(std::unique_ptr<ToStringVisitor> visitor) {
+    return visitor->visit(this);
+}
 
-        auto getValue() {
-            return mValue;
-        }
+/////////////////////////////////////////////////////////////////////////////
 
-        string accept(unique_ptr<ToStringVisitor> visitor) override {
-            return visitor->visit(this);
-        }
-    };
+BinaryNode::BinaryNode(std::string op, std::unique_ptr<AstNode> lhs, std::unique_ptr<AstNode> rhs) 
+    : mOp(op), mLhs(move(lhs)), mRhs(move(rhs)) {}
 
-    class NumberNode : public PrimaryNode {
-        using PrimaryNode::PrimaryNode;
-    };
-    class IdentifierNode : public PrimaryNode {
-        using PrimaryNode::PrimaryNode;
-    };
+std::string BinaryNode::getOp() {
+    return mOp;
+}
 
-    class BinaryNode : public AstNode
-    {
-        string mOp;
-        unique_ptr<AstNode> mLhs;
-        unique_ptr<AstNode> mRhs;
-    
-    public:
-        BinaryNode(string op, unique_ptr<AstNode> lhs, unique_ptr<AstNode> rhs) 
-            : mOp(op), mLhs(move(lhs)), mRhs(move(rhs)) {}
-        
-        string getOp() {
-            return mOp;
-        }
+AstNode & BinaryNode::getLhs() {
+    return *mLhs;
+}
 
-        AstNode & getLhs() {
-            return *mLhs;
-        }
+AstNode & BinaryNode::getRhs() {
+    return *mRhs;
+}
 
-        AstNode & getRhs() {
-            return *mRhs;
-        }
+std::string BinaryNode::accept(std::unique_ptr<ToStringVisitor> visitor) {
+    return visitor->visit(this);
+}
 
-        string accept(unique_ptr<ToStringVisitor> visitor) override {
-            return visitor->visit(this);
-        }
-    };
+////////////////////////////////////////////////////////////////////////////////////
 
-    class PrefixNode : public AstNode
-    {
-        string mOp;
-        unique_ptr<AstNode> mRhs;
-    
-    public:
-        PrefixNode(string op, unique_ptr<AstNode> rhs) : mOp(op), mRhs(move(rhs)) {}
+PrefixNode::PrefixNode(std::string op, std::unique_ptr<AstNode> rhs) : mOp(op), mRhs(move(rhs)) {}
 
-        string getOp() {
-            return mOp;
-        }
+std::string PrefixNode::getOp() {
+    return mOp;
+}
 
-        AstNode & getRhs() {
-            return *mRhs;
-        }
+AstNode & PrefixNode::getRhs() {
+    return *mRhs;
+}
 
-        string accept(unique_ptr<ToStringVisitor> visitor) override {
-            return visitor->visit(this);
-        }
-    };
+std::string PrefixNode::accept(std::unique_ptr<ToStringVisitor> visitor) {
+    return visitor->visit(this);
+}
 
-    string ToStringVisitor::visit(PrimaryNode * node) {
-            stringstream str;
-            if (node->getType() == "string") {
-                str << "Identifier(" << get<string>(node->getValue()) << ")";
-            } else if (node->getType() == "int") {
-                str << "Int(" << get<int>(node->getValue()) << ")";
-            } else if (node->getType() == "float") {
-                str << "Float(" << get<float>(node->getValue()) << ")";
-            }
+////////////////////////////////////////////////////////////////////////////////////
 
-            return str.str();
-        }
+std::string ToStringVisitor::visit(PrimaryNode * node) {
+    std::stringstream str;
+    if (node->getType() == "string") {
+        str << "Identifier(" << std::get<std::string>(node->getValue()) << ")";
+    } else if (node->getType() == "int") {
+        str << "Int(" << std::get<int>(node->getValue()) << ")";
+    } else if (node->getType() == "float") {
+        str << "Float(" << std::get<float>(node->getValue()) << ")";
+    }
 
-    string ToStringVisitor::visit(BinaryNode * node) {
-            stringstream str;
-            str << "Binary(op: '" << node->getOp() << "', lhs: " << node->getLhs() << ", rhs: " << node->getRhs() << ")";
-            return str.str();
-        }
+    return str.str();
+}
 
-    string ToStringVisitor::visit(PrefixNode * node) {
-            stringstream str;
-            str << "Prfix(op: " << node->getOp() << ", rhs: " << node->getRhs() << ")";
-            return str.str();
-        }
+std::string ToStringVisitor::visit(BinaryNode * node) {
+    std::stringstream str;
+    str << "Binary(op: '" << node->getOp() << "', lhs: " << node->getLhs() << ", rhs: " << node->getRhs() << ")";
+    return str.str();
+}
 
+std::string ToStringVisitor::visit(PrefixNode * node) {
+    std::stringstream str;
+    str << "Prfix(op: " << node->getOp() << ", rhs: " << node->getRhs() << ")";
+    return str.str();
 }

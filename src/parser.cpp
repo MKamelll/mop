@@ -1,176 +1,150 @@
-#pragma once
 #include "lexer.h"
-#include "astnode.cpp"
+#include "parser.h"
+#include "astnode.h"
 
-namespace parser
-{
-    using namespace std;
-    
-    class ParserError : public runtime_error
-    {
-    public:
-        using runtime_error::runtime_error;
-    };
+using namespace parser;
 
-    enum class Assoc
-    {
-        RIGHT, LEFT, NONE
-    };
+/////////////////////////////////////////////////////////////////////
 
-    class OpInfo
-    {
-        int mPrec;
-        Assoc mAssoc;
-    public:
-        OpInfo(int prec, Assoc assoc) : mPrec(prec), mAssoc(assoc) {}
-        int getPrec() { return mPrec; }
-        Assoc getAssoc() { return mAssoc; }
-    };
-    
-    class Ast
-    {
-        lexer::Tokenizer mLexer;
-        unique_ptr<astnode::AstNode> mRoot;
-        lexer::Token mCurrToken;
-        lexer::Token mPrevToken;
-        vector<unique_ptr<astnode::AstNode>> mSubTrees;
+OpInfo::OpInfo(int prec, Assoc assoc) : mPrec(prec), mAssoc(assoc) {}
+
+int OpInfo::getPrec() { return mPrec; }
+
+Assoc OpInfo::getAssoc() { return mAssoc; }
+
+///////////////////////////////////////////////////////////////////
+
+Ast::Ast(lexer::Tokenizer lexer) : mLexer(lexer), mCurrToken(mLexer.next()), mPrevToken(mCurrToken) {}
+
+bool Ast::isAtEnd() {
+    if (mCurrToken.getType() == lexer::TokenType::ENDOFFILE) {
+        return true;
+    }
+
+    return false;
+}
+
+void Ast::advance() {
+    mPrevToken = mCurrToken;
+    mCurrToken = mLexer.next();
+}
+
+lexer::Token Ast::curr() {
+    return mCurrToken;
+}
+
+lexer::Token Ast::previous() {
+    return mPrevToken;
+}
+
+bool Ast::check(lexer::TokenType type) {
+    if (type == mCurrToken.getType()) {
+        return true;
+    }
+
+    return false;
+} 
+
+template<typename... T>
+bool Ast::match(T... types) {
+    for (auto& type : {static_cast<lexer::TokenType>(types)...}) {
+        if (check(type)) {
+            advance();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+OpInfo Ast::getPrecAndAssoc(std::string op) {
+    if (op == "+") {
+        return OpInfo(4, Assoc::LEFT);
+    } else if (op == "-") {
+        return OpInfo(4, Assoc::LEFT);
+    } else if (op == "*") {
+        return OpInfo(5, Assoc::LEFT);
+    } else if (op == "/") {
+        return OpInfo(5, Assoc::LEFT);
+    } else if (op == "%") {
+        return OpInfo(5, Assoc::LEFT);
+    } else if (op == "^") {
+        return OpInfo(6, Assoc::RIGHT);
+    } else {
+        return OpInfo(-1, Assoc::NONE);
+    }
+}
         
-        bool isAtEnd() {
-            if (mCurrToken.getType() == lexer::TokenType::ENDOFFILE) {
-                return true;
-            }
+std::vector<std::unique_ptr<astnode::AstNode>> Ast::parse() {
+    if (isAtEnd()) return std::move(mSubTrees);
 
-            return false;
-        }
+    std::unique_ptr<astnode::AstNode> expr = parseExpr();
 
-        void advance() {
-            mPrevToken = mCurrToken;
-            mCurrToken = mLexer.next();
-        }
+    mSubTrees.push_back(std::move(expr));
 
-        lexer::Token curr() {
-            return mCurrToken;
-        }
+    return parse();
+}
 
-        lexer::Token previous() {
-            return mPrevToken;
-        }
+std::unique_ptr<astnode::AstNode> Ast::parseExpr(int minPrec) {
+    std::unique_ptr<astnode::AstNode> lhs = parsePrimary();
 
-        bool check(lexer::TokenType type) {
-            if (type == mCurrToken.getType()) {
-                return true;
-            }
+    while (!isAtEnd()) {
+        std::string op = curr().getLexemeStr();
+        auto opInfo = getPrecAndAssoc(op);
 
-            return false;
-        } 
+        if (opInfo.getPrec() == -1 || opInfo.getPrec() < minPrec) break;
 
-        template<typename... T>
-        bool match(T... types) {
-            for (auto& type : {static_cast<lexer::TokenType>(types)...}) {
-                if (check(type)) {
-                    advance();
-                    return true;
-                }
-            }
+        int nextMinPrec = opInfo.getAssoc() == Assoc::LEFT ? opInfo.getPrec() + 1 : opInfo.getPrec();
 
-            return false;
-        }
+        advance();
 
-        OpInfo getPrecAndAssoc(string op) {
-            if (op == "+") {
-                return OpInfo(4, Assoc::LEFT);
-            } else if (op == "-") {
-                return OpInfo(4, Assoc::LEFT);
-            } else if (op == "*") {
-                return OpInfo(5, Assoc::LEFT);
-            } else if (op == "/") {
-                return OpInfo(5, Assoc::LEFT);
-            } else if (op == "%") {
-                return OpInfo(5, Assoc::LEFT);
-            } else if (op == "^") {
-                return OpInfo(6, Assoc::RIGHT);
-            } else {
-                return OpInfo(-1, Assoc::NONE);
-            }
-        }
+        std::unique_ptr<astnode::AstNode> rhs = parseExpr(nextMinPrec);
 
-    public:
-        Ast(lexer::Tokenizer lexer) : mLexer(lexer), mCurrToken(mLexer.next()), mPrevToken(mCurrToken) {}
-        
-        vector<unique_ptr<astnode::AstNode>> parse() {
-            if (isAtEnd()) return move(mSubTrees);
+        lhs = std::make_unique<astnode::BinaryNode>(astnode::BinaryNode(op, std::move(lhs), std::move(rhs)));
+    }
+                
+    mRoot = std::move(lhs);
+    return std::move(mRoot);           
+}
 
-            unique_ptr<astnode::AstNode> expr = parseExpr();
+std::unique_ptr<astnode::AstNode> Ast::parsePrimary() {
+    return parseNumber();
+}
 
-            mSubTrees.push_back(move(expr));
+std::unique_ptr<astnode::AstNode> Ast::parseNumber() {
+    if (match(lexer::TokenType::INT, lexer::TokenType::FLOAT)) {
+        return std::make_unique<astnode::NumberNode>(astnode::NumberNode(previous().getLexeme()));
+    }
 
-            return parse();
-        }
+    return parseIdentifier();
+}
 
-        unique_ptr<astnode::AstNode> parseExpr(int minPrec = 0) {
-            unique_ptr<astnode::AstNode> lhs = parsePrimary();
+std::unique_ptr<astnode::AstNode> Ast::parseIdentifier() {
+    if (match(lexer::TokenType::IDENTIFIER)) {
+        return std::make_unique<astnode::IdentifierNode>(astnode::IdentifierNode(previous().getLexeme()));
+    }
 
-            while (!isAtEnd()) {
-                string op = curr().getLexemeStr();
-                auto opInfo = getPrecAndAssoc(op);
+    return parsePrefix();
+}
 
-                if (opInfo.getPrec() == -1 || opInfo.getPrec() < minPrec) break;
+std::unique_ptr<astnode::AstNode> Ast::parsePrefix() {
+    if (match(lexer::TokenType::PLUS, lexer::TokenType::MINUS)) {
+        std::string op = previous().getLexemeStr();
+        std::unique_ptr<astnode::AstNode> rhs = parsePrimary(); 
+        return std::make_unique<astnode::PrefixNode>(astnode::PrefixNode(op, std::move(rhs)));
+    }
+    
+    return parseParens();
+}
 
-                int nextMinPrec = opInfo.getAssoc() == Assoc::LEFT ? opInfo.getPrec() + 1 : opInfo.getPrec();
+std::unique_ptr<astnode::AstNode> Ast::parseParens() {
+    if (match(lexer::TokenType::LEFT_PAREN)) {
+        if (match(lexer::TokenType::RIGHT_PAREN)) return parseExpr();
+        std::unique_ptr<astnode::AstNode> expr = parseExpr();
+        if (match(lexer::TokenType::RIGHT_PAREN)) return expr;
 
-                advance();
+        throw ParserError("Expected a closing ')' instead got" + curr().getLexemeStr() + "'");
+    }
 
-                unique_ptr<astnode::AstNode> rhs = parseExpr(nextMinPrec);
-
-                lhs = make_unique<astnode::BinaryNode>(astnode::BinaryNode(op, move(lhs), move(rhs)));
-            }
-                        
-            mRoot = move(lhs);
-            return move(mRoot);           
-        }
-
-        unique_ptr<astnode::AstNode> parsePrimary() {
-            return parseNumber();
-        }
-
-        unique_ptr<astnode::AstNode> parseNumber() {
-            if (match(lexer::TokenType::INT, lexer::TokenType::FLOAT)) {
-                auto node = make_unique<astnode::NumberNode>(astnode::NumberNode(previous().getLexeme()));
-                return node;
-            }
-
-            return parseIdentifier();
-        }
-
-        unique_ptr<astnode::AstNode> parseIdentifier() {
-            if (match(lexer::TokenType::IDENTIFIER)) {
-                auto node = make_unique<astnode::IdentifierNode>(astnode::IdentifierNode(previous().getLexeme()));
-                return node;
-            }
-
-            return parsePrefix();
-        }
-
-        unique_ptr<astnode::AstNode> parsePrefix() {
-            if (match(lexer::TokenType::PLUS, lexer::TokenType::MINUS)) {
-                string op = previous().getLexemeStr();
-                unique_ptr<astnode::AstNode> rhs = parsePrimary(); 
-                return make_unique<astnode::PrefixNode>(astnode::PrefixNode(op, move(rhs)));
-            }
-            
-            return parseParens();
-        }
-
-        unique_ptr<astnode::AstNode> parseParens() {
-            if (match(lexer::TokenType::LEFT_PAREN)) {
-                if (match(lexer::TokenType::RIGHT_PAREN)) return parseExpr();
-                unique_ptr<astnode::AstNode> expr = parseExpr();
-                if (match(lexer::TokenType::RIGHT_PAREN)) return expr;
-
-                throw ParserError("Expected a closing ')' instead got" + curr().getLexemeStr() + "'");
-            }
-
-            throw ParserError("Expected a primary instead got '" + curr().getLexemeStr() + "'");
-        }
-    };
+    throw ParserError("Expected a primary instead got '" + curr().getLexemeStr() + "'");
 }
